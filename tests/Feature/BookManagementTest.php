@@ -6,23 +6,23 @@ use App\Models\Book;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
-class BookReservationTest extends TestCase
+class BookManagementTest extends TestCase
 {
     use RefreshDatabase;
 
     /** @test */
     public function a_book_can_be_added_to_the_library()
     {
-        $this->withoutExceptionHandling();
-
        $response = $this->post('/books', [
            'title' => 'Cool Book Title',
            'author' => 'Victor',
        ]);
 
-       $response->assertOk();
+       $book = Book::first();
 
        $this->assertCount(1, Book::all());
+
+       $response->assertRedirect($book->path());
     }
     /** @test */
     public function a_title_is_required()
@@ -51,23 +51,44 @@ class BookReservationTest extends TestCase
     {
         $this->withoutExceptionHandling();
 
-        // create a book in the database
         $this->post('/books', [
             'title' => 'Old Title',
             'author' => 'Old Author',
         ]);
 
-        // we need the id of book to update
         $book = Book::first();
 
-
-        // update the book
-        $this->patch('/books/' . $book->id, [
+        $response = $this->patch($book->path(), [
             'title' => 'New Title',
             'author' => 'New Author',
         ]);
 
         $this->assertEquals('New Title', Book::first()->title);
         $this->assertEquals('New Author', Book::first()->author);
+
+        $response->assertRedirect($book->path());
+    }
+
+    /** @test */
+    public function a_book_can_be_deleted()
+    {
+        $this->withoutExceptionHandling();
+
+        $this->post('/books', [
+           'title' => 'Old Title',
+           'author' => 'Old Author',
+        ]);
+
+        // confirm the book record exists
+        $this->assertCount(1, Book::all());
+
+        $book = Book::first();
+
+        $response = $this->delete($book->path());
+
+        // confirm the record has been deleted
+        $this->assertCount(0, Book::all());
+
+        $response->assertRedirect('/books');
     }
 }
